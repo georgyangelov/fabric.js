@@ -394,15 +394,33 @@
           // rotate object only if shift key is not pressed 
           // and if it is not a group we are transforming
 
-          if (!e.shiftKey) {
+          //TODO
+          /*if (!e.shiftKey) {
             this._rotateObject(x, y);
 
             this.fire('object:rotating', {
               target: this._currentTransform.target
             });
-          }
+          }*/
 
-          this._scaleObject(x, y);
+          if (e.shiftKey) {
+            if (this._currentTransform.currentAction === 'scale') {
+              // We came from a normal scale so reset the object's scale to the original
+              var t = this._currentTransform;
+              t.target.set('scaleX', t.original.scaleX);
+              t.target.set('scaleY', t.original.scaleY);
+              t.target.set('left', t.original.left);
+              t.target.set('top', t.original.top);
+            }
+            
+            this._currentTransform.currentAction = 'scaleEqually';
+            this._scaleObject(x, y, 'equally');
+          }
+          else {
+            this._currentTransform.currentAction = 'scale';
+            this._scaleObject(x, y);  
+          }
+          
           this.fire('object:scaling', {
             target: this._currentTransform.target
           });
@@ -512,14 +530,27 @@
           corner,
           pointer = getPointer(e);
 
-      if (corner = target._findTargetCorner(e, this._offset)) {
+      corner = target._findTargetCorner(e, this._offset);
+      if (corner) {
         action = (corner === 'ml' || corner === 'mr') 
           ? 'scaleX' 
           : (corner === 'mt' || corner === 'mb') 
             ? 'scaleY' 
             : 'rotate';
       }
+      
+      var originX = "center", originY = "center";
+      if (corner === 'ml' || corner === 'tl' || corner === 'bl')
+        originX = "right";
+      else if (corner === 'mr' || corner === 'tr' || corner === 'br')
+        originX = "left";
+        
+      if (corner === 'tl' || corner === 'mt' || corner === 'tr')
+        originY = "bottom";
+      else if (corner === 'bl' || corner === 'mb' || corner === 'br')
+        originY = "top";
 
+//      var center = target.getCenterPoint();
       this._currentTransform = {
         target: target,
         action: action,
@@ -527,8 +558,8 @@
         scaleY: target.scaleY,
         offsetX: pointer.x - target.left,
         offsetY: pointer.y - target.top,
-        ex: pointer.x,
-        ey: pointer.y,
+        originX: originX,
+        originY: originY,
         left: target.left, 
         top: target.top,
         theta: target.theta,
@@ -537,7 +568,9 @@
 
       this._currentTransform.original = {
         left: target.left,
-        top: target.top
+        top: target.top,
+        scaleX: target.scaleX,
+        scaleY: target.scaleY
       };
     },
 
@@ -690,31 +723,54 @@
      * @method _scaleObject
      * @param x {Number} pointer's x coordinate
      * @param y {Number} pointer's y coordinate
-     * @param by {String} Either 'x' or 'y' - specifies dimension constraint by which to scale an object. 
+     * @param by {String} Either 'x', 'y' or 'equally' - specifies dimension constraint by which to scale an object. 
      *                    When not provided, an object is scaled by both dimensions equally
-     */ 
-    _scaleObject: function (x, y, by) {
+     */
+    _scaleObject: function(x, y, by)
+    {
       var t = this._currentTransform,
           offset = this._offset,
           target = t.target;
-
+      
+      // Nothing to do here...
       if (target.lockScalingX && target.lockScalingY) return;
-
-      var lastLen = sqrt(pow(t.ey - t.top - offset.top, 2) + pow(t.ex - t.left - offset.left, 2)),
-          curLen = sqrt(pow(y - t.top - offset.top, 2) + pow(x - t.left - offset.left, 2));
-
-      target._scaling = true;
-
+      
+      // Get the constraint point
+      var origin = target.getPointByOrigin(t.originX, t.originY);
+      
+      // Calculate the scale deltas
+      var localMouse = target.toLocalPoint(new fabric.Point(x - offset.left, y - offset.top));      
+      var localOrigin = target.toLocalPoint(origin);
+      var curLenX  = localMouse.x - localOrigin.x,
+          curLenY  = localMouse.y - localOrigin.y;
+      
+      if (t.originX === 'right')
+        curLenX *= -1;
+      if (t.originY === 'bottom')
+        curLenY *= -1;
+      
+      // Actually scale the object
       if (!by) {
-        target.lockScalingX || target.set('scaleX', t.scaleX * curLen/lastLen);
-        target.lockScalingY || target.set('scaleY', t.scaleY * curLen/lastLen);
+        target.lockScalingX || target.set('scaleX', curLenX/target.width);
+        target.lockScalingY || target.set('scaleY', curLenY/target.height);
+      }
+      else if (by === 'equally' && !target.lockScalingX && !target.lockScalingY) {
+        //TODO: Make the resize happen based on a distance to the Line of the mouse point and the origin
+        var dist = Math.sqrt(Math.pow(curLenX, 2) + Math.pow(curLenY, 2));
+        var lastDist = Math.sqrt(Math.pow(target.width * target.scaleX, 2) + Math.pow(target.height * target.scaleY, 2));
+        
+        target.set('scaleX', target.scaleX * dist/lastDist);
+        target.set('scaleY', target.scaleY * dist/lastDist);
       }
       else if (by === 'x' && !target.lockUniScaling) {
-        target.lockScalingX || target.set('scaleX', t.scaleX * curLen/lastLen);
+        target.lockScalingX || target.set('scaleX', curLenX/target.width);
       }
       else if (by === 'y' && !target.lockUniScaling) {
-        target.lockScalingY || target.set('scaleY', t.scaleY * curLen/lastLen);
+        target.lockScalingY || target.set('scaleY', curLenY/target.height);
       }
+      
+      // Make sure the constraints apply
+      target.setPositionByOrigin(origin, t.originX, t.originY);
     },
 
     /**
