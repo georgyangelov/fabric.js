@@ -500,7 +500,30 @@
      * @return {fabric.Point}
      */
     toLocalPoint: function(point, originX, originY) {
-      return fabric.util.rotatePoint(new fabric.Point(point.x - this.left, point.y - this.top), this.getCenterPoint(), -this.theta);
+      var center = this.getCenterPoint();
+      
+      var x, y;
+      if (originX !== undefined && originY !== undefined) {
+        if ( originX == "left" )
+          x = center.x - this.getWidth() / 2;
+        else if ( originX == "right" )
+          x = center.x + this.getWidth() / 2;
+        else
+          x = center.x;
+        
+        if ( originY == "top" )
+          y = center.y - this.getHeight() / 2;
+        else if ( originY == "bottom" )
+          y = center.y + this.getHeight() / 2;
+        else
+          y = center.y;
+      }
+      else {
+        x = this.left;
+        y = this.top;
+      }
+      
+      return fabric.util.rotatePoint(new fabric.Point(point.x, point.y), center, -this.theta).subtractEquals(new fabric.Point(x, y));
     },
     
     /**

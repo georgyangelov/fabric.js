@@ -736,41 +736,35 @@
       if (target.lockScalingX && target.lockScalingY) return;
       
       // Get the constraint point
-      var origin = target.getPointByOrigin(t.originX, t.originY);
-      
-      // Calculate the scale deltas
-      var localMouse = target.toLocalPoint(new fabric.Point(x - offset.left, y - offset.top));      
-      var localOrigin = target.toLocalPoint(origin);
-      var curLenX  = localMouse.x - localOrigin.x,
-          curLenY  = localMouse.y - localOrigin.y;
+      var constraintPosition = target.translateToOriginPoint(target.getCenterPoint(), t.originX, t.originY);
+      var localMouse = target.toLocalPoint(new fabric.Point(x - offset.left, y - offset.top), t.originX, t.originY);
       
       if (t.originX === 'right')
-        curLenX *= -1;
+        localMouse.x *= -1;
       if (t.originY === 'bottom')
-        curLenY *= -1;
-      
+        localMouse.y *= -1;
+          
       // Actually scale the object
-      if (!by) {
-        target.lockScalingX || target.set('scaleX', curLenX/target.width);
-        target.lockScalingY || target.set('scaleY', curLenY/target.height);
-      }
-      else if (by === 'equally' && !target.lockScalingX && !target.lockScalingY) {
-        //TODO: Make the resize happen based on a distance to the Line of the mouse point and the origin
-        var dist = Math.sqrt(Math.pow(curLenX, 2) + Math.pow(curLenY, 2));
-        var lastDist = Math.sqrt(Math.pow(target.width * target.scaleX, 2) + Math.pow(target.height * target.scaleY, 2));
+      if (by === 'equally' && !target.lockScalingX && !target.lockScalingY) {
+        var dist = localMouse.y + localMouse.x;
+        var lastDist = target.height * target.scaleY + target.width * target.scaleX;
         
         target.set('scaleX', target.scaleX * dist/lastDist);
         target.set('scaleY', target.scaleY * dist/lastDist);
       }
+      else if (!by) {
+        target.lockScalingX || target.set('scaleX', localMouse.x/target.width);
+        target.lockScalingY || target.set('scaleY', localMouse.y/target.height);
+      }
       else if (by === 'x' && !target.lockUniScaling) {
-        target.lockScalingX || target.set('scaleX', curLenX/target.width);
+        target.lockScalingX || target.set('scaleX', localMouse.x/target.width);
       }
       else if (by === 'y' && !target.lockUniScaling) {
-        target.lockScalingY || target.set('scaleY', curLenY/target.height);
+        target.lockScalingY || target.set('scaleY', localMouse.y/target.height);
       }
       
       // Make sure the constraints apply
-      target.setPositionByOrigin(origin, t.originX, t.originY);
+      target.setPositionByOrigin(constraintPosition, t.originX, t.originY);
     },
 
     /**
