@@ -169,6 +169,8 @@
 
       var object = {
         type:         this.type,
+        originY:      this.originY,
+        originX:      this.originX,
         left:         toFixed(this.left, this.NUM_FRACTION_DIGITS),
         top:          toFixed(this.top, this.NUM_FRACTION_DIGITS),
         width:        toFixed(this.width, this.NUM_FRACTION_DIGITS),
@@ -223,8 +225,9 @@
      */
     getSvgTransform: function() {
       var angle = this.getAngle();
+      var center = this.getCenterPoint();
       return [
-        "translate(", toFixed(this.left, 2), " ", toFixed(this.top, 2), ")",
+        "translate(", toFixed(center.x, 2), " ", toFixed(center.y, 2), ")",
         angle !== 0 ? (" rotate(" + toFixed(angle, 2) + ")") : '',
         (this.scaleX === 1 && this.scaleY === 1) ? '' : (" scale(" + toFixed(this.scaleX, 2) + " " + toFixed(this.scaleY, 2) + ")")
       ].join('');
