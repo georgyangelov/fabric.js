@@ -45,13 +45,7 @@
      * @type Number
      */
     FX_DURATION:                500,
-
-    /**
-     * @constant
-     * @type Number
-     */
-    MIN_SCALE_LIMIT:            0.1,
-
+   
     /**
      * List of properties to consider when checking if state of an object is changed (fabric.Object#hasStateChanged);
      * as well as for history (undo/redo) purposes
@@ -88,6 +82,7 @@
     borderOpacityWhenMoving:  0.4,
     borderScaleFactor:        1,
     transformMatrix:          null,
+    minScaleLimit:            0.01,
 
     /**
      * When set to `false`, an object can not be selected for modification (using either point-click-based or group-based selection)
@@ -275,6 +270,17 @@
     toString: function() {
       return "#<fabric." + capitalize(this.type) + ">";
     },
+    
+    _constrainScale: function(value) {
+      if (Math.abs(value) < this.minScaleLimit) {
+        if (value < 0)
+          return -this.minScaleLimit;
+        else
+          return this.minScaleLimit;
+      }
+      
+      return value;
+    },
 
     /**
      * Basic setter
@@ -284,10 +290,23 @@
      * @chainable
      */
     set: function(property, value) {
-      var shouldConstrainValue = (property === 'scaleX' || property === 'scaleY') && value < this.MIN_SCALE_LIMIT;
+      var shouldConstrainValue = (property === 'scaleX' || property === 'scaleY');
       if (shouldConstrainValue) {
-        value = this.MIN_SCALE_LIMIT;
+        value = this._constrainScale(value);
       }
+      
+      if (property === 'scaleX' && value < 0) {
+        this.flipX = !this.flipX;
+        value *= -1;
+      }
+      else if (property === 'scaleY' && value < 0) {
+        this.flipY = !this.flipY;
+        value *= -1;
+      }
+      else if (property === 'width' || property === 'height') {
+        this.minScaleLimit = Math.min(0.1, 1/Math.max(this.width, this.height));
+      }
+      
       if (typeof property == 'object') {
         for (var prop in property) {
           this.set(prop, property[prop]);
@@ -560,6 +579,15 @@
      * @chainable
      */
     scale: function(value) {
+      value = this._constrainScale(value);
+      
+      if (value < 0)
+      {
+        this.flipX = !this.flipX;
+        this.flipY = !this.flipY;
+        value *= -1;
+      }
+      
       this.scaleX = value;
       this.scaleY = value;
       return this;
@@ -721,8 +749,8 @@
       ctx.globalAlpha = this.isMoving ? this.borderOpacityWhenMoving : 1;
       ctx.strokeStyle = this.borderColor;
 
-      var scaleX = 1 / (this.scaleX < this.MIN_SCALE_LIMIT ? this.MIN_SCALE_LIMIT : this.scaleX),
-          scaleY = 1 / (this.scaleY < this.MIN_SCALE_LIMIT ? this.MIN_SCALE_LIMIT : this.scaleY);
+      var scaleX = 1 / this._constrainScale(this.scaleX),
+          scaleY = 1 / this._constrainScale(this.scaleY);
 
       ctx.lineWidth = 1 / this.borderScaleFactor;
 

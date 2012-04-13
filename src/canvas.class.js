@@ -745,22 +745,47 @@
         localMouse.y *= -1;
           
       // Actually scale the object
+      var newScaleX = target.scaleX, newScaleY = target.scaleY;
       if (by === 'equally' && !target.lockScalingX && !target.lockScalingY) {
         var dist = localMouse.y + localMouse.x;
-        var lastDist = target.height * target.scaleY + target.width * target.scaleX;
+        var lastDist = target.height * t.scaleY + target.width * t.scaleX;
         
-        target.set('scaleX', target.scaleX * dist/lastDist);
-        target.set('scaleY', target.scaleY * dist/lastDist);
+        // We use t.scaleX/Y instead of target.scaleX/Y because the object may have a min scale and we'll loose the proportions
+        newScaleX = t.scaleX * dist/lastDist;
+        newScaleY = t.scaleY * dist/lastDist
+        target.set('scaleX', newScaleX);
+        target.set('scaleY', newScaleY);
       }
       else if (!by) {
-        target.lockScalingX || target.set('scaleX', localMouse.x/target.width);
-        target.lockScalingY || target.set('scaleY', localMouse.y/target.height);
+        newScaleX = localMouse.x/target.width;
+        newScaleY = localMouse.y/target.height;
+        target.lockScalingX || target.set('scaleX', newScaleX);
+        target.lockScalingY || target.set('scaleY', newScaleY);
       }
       else if (by === 'x' && !target.lockUniScaling) {
-        target.lockScalingX || target.set('scaleX', localMouse.x/target.width);
+        newScaleX = localMouse.x/target.width;
+        target.lockScalingX || target.set('scaleX', newScaleX);
       }
       else if (by === 'y' && !target.lockUniScaling) {
-        target.lockScalingY || target.set('scaleY', localMouse.y/target.height);
+        newScaleY = localMouse.y/target.height;
+        target.lockScalingY || target.set('scaleY', newScaleY);
+      }
+      
+      // Check if we flipped
+      if (newScaleX < 0)
+      {
+        if (t.originX === 'left')
+          t.originX = 'right';
+        else if (t.originX === 'right')
+          t.originX = 'left';
+      }
+      
+      if (newScaleY < 0)
+      {
+        if (t.originY === 'top')
+          t.originY = 'bottom';
+        else if (t.originY === 'bottom')
+          t.originY = 'top';
       }
       
       // Make sure the constraints apply
@@ -780,8 +805,9 @@
 
       if (t.target.lockRotation) return;
 
-      var lastAngle = atan2(t.ey - t.top - o.top, t.ex - t.left - o.left),
-          curAngle = atan2(y - t.top - o.top, x - t.left - o.left);
+      var center = t.target.getCenterPoint();
+      var lastAngle = atan2(t.ey - center.top - o.top, t.ex - center.left - o.left),
+          curAngle = atan2(y - center.top - o.top, x - center.left - o.left);
 
       t.target.set('theta', (curAngle - lastAngle) + t.theta);
     },
