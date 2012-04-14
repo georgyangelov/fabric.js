@@ -459,6 +459,11 @@
       this.fire('mouse:move', { target: target, e: e });
     },
     
+    /**
+      * Resets the current transform to its original values and chooses the type of resizing based on the event
+      * @method _resetCurrentTransform
+      * @param e {Event} Event object fired on mousemove
+      */
     _resetCurrentTransform: function(e) {
       var t = this._currentTransform;
       t.target.set('scaleX', t.original.scaleX);
