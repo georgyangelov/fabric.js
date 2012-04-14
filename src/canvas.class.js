@@ -391,17 +391,21 @@
 
         var t = this._currentTransform, reset = false;
         if (
-            // Switch from a normal resize to center-based
-            (e.altKey && (t.originX !== 'center' || t.originY !== 'center'))
-            ||
-            // Switch from center-based resize to normal one
-            (!e.altKey && t.originX === 'center' && t.originY === 'center')
+            (t.action === 'scale' || t.action === 'scaleX' || t.action === 'scaleY')
+            &&
+            (
+              // Switch from a normal resize to center-based
+              (e.altKey && (t.originX !== 'center' || t.originY !== 'center'))
+              ||
+              // Switch from center-based resize to normal one
+              (!e.altKey && t.originX === 'center' && t.originY === 'center')
+            )
            ) {
           this._resetCurrentTransform(e);
           reset = true;
         }
         
-        if (this._currentTransform.action === 'rotate') {  
+        if (this._currentTransform.action === 'scale') {  
           // rotate object only if shift key is not pressed 
           // and if it is not a group we are transforming
 
@@ -582,7 +586,7 @@
           ? 'scaleX' 
           : (corner === 'mt' || corner === 'mb') 
             ? 'scaleY' 
-            : 'rotate';
+            : 'scale';
       }
       
       var originX = "center", originY = "center";
