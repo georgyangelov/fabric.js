@@ -299,7 +299,6 @@
       }
       else {
         // determine if it's a drag or rotate case
-        // rotate and scale will happen at the same time
         this.stateful && target.saveState();
 
         if (corner = target._findTargetCorner(e, this._offset)) {
@@ -390,6 +389,18 @@
 
         this._currentTransform.target.isMoving = true;
 
+        var t = this._currentTransform, reset = false;
+        if (
+            // Switch from a normal resize to center-based
+            (e.altKey && (t.originX !== 'center' || t.originY !== 'center'))
+            ||
+            // Switch from center-based resize to normal one
+            (!e.altKey && t.originX === 'center' && t.originY === 'center')
+           ) {
+          this._resetCurrentTransform(e);
+          reset = true;
+        }
+        
         if (this._currentTransform.action === 'rotate') {  
           // rotate object only if shift key is not pressed 
           // and if it is not a group we are transforming
@@ -402,21 +413,17 @@
               target: this._currentTransform.target
             });
           }*/
-
+          
           if (e.shiftKey) {
-            if (this._currentTransform.currentAction === 'scale') {
-              // We came from a normal scale so reset the object's scale to the original
-              var t = this._currentTransform;
-              t.target.set('scaleX', t.original.scaleX);
-              t.target.set('scaleY', t.original.scaleY);
-              t.target.set('left', t.original.left);
-              t.target.set('top', t.original.top);
+            if (!reset && t.currentAction === 'scale') {
+              // Switch from a normal resize to proportional
+              this._resetCurrentTransform(e);
             }
             
-            this._currentTransform.currentAction = 'scaleEqually';
+            this._currentTransform.currentAction = 'scaleEqually';            
             this._scaleObject(x, y, 'equally');
           }
-          else {
+          else {            
             this._currentTransform.currentAction = 'scale';
             this._scaleObject(x, y);  
           }
@@ -450,6 +457,40 @@
         this.renderAll();
       }
       this.fire('mouse:move', { target: target, e: e });
+    },
+    
+    _resetCurrentTransform: function(e) {
+      var t = this._currentTransform;
+      t.target.set('scaleX', t.original.scaleX);
+      t.target.set('scaleY', t.original.scaleY);
+      t.target.set('left', t.original.left);
+      t.target.set('top', t.original.top);
+      
+      if (e.altKey) {
+        if (t.originX !== 'center') {
+          if (t.originX === 'left') {
+            t.mouseXSign = -1;
+          }
+          else {
+            t.mouseXSign = 1;
+          }
+        }
+        if (t.originY !== 'center') {
+          if (t.originY === 'top') {
+            t.mouseYSign = -1;
+          }
+          else {
+            t.mouseYSign = 1;
+          }
+        }
+        
+        t.originX = 'center';
+        t.originY = 'center';
+      }
+      else {
+        t.originX = t.original.originX;
+        t.originY = t.original.originY;
+      }
     },
 
     /**
@@ -540,17 +581,20 @@
       }
       
       var originX = "center", originY = "center";
-      if (corner === 'ml' || corner === 'tl' || corner === 'bl')
-        originX = "right";
-      else if (corner === 'mr' || corner === 'tr' || corner === 'br')
-        originX = "left";
-        
-      if (corner === 'tl' || corner === 'mt' || corner === 'tr')
-        originY = "bottom";
-      else if (corner === 'bl' || corner === 'mb' || corner === 'br')
-        originY = "top";
-
-//      var center = target.getCenterPoint();
+        if (corner === 'ml' || corner === 'tl' || corner === 'bl') {
+          originX = "right";
+        }
+        else if (corner === 'mr' || corner === 'tr' || corner === 'br') {
+          originX = "left";
+        }
+          
+        if (corner === 'tl' || corner === 'mt' || corner === 'tr') {
+          originY = "bottom";
+        }
+        else if (corner === 'bl' || corner === 'mb' || corner === 'br') {
+          originY = "top";
+        }
+      
       this._currentTransform = {
         target: target,
         action: action,
@@ -563,15 +607,21 @@
         left: target.left, 
         top: target.top,
         theta: target.theta,
-        width: target.width * target.scaleX
+        width: target.width * target.scaleX,
+        mouseXSign: 1,
+        mouseYSign: 1
       };
 
       this._currentTransform.original = {
         left: target.left,
         top: target.top,
         scaleX: target.scaleX,
-        scaleY: target.scaleY
+        scaleY: target.scaleY,
+        originX: originX,
+        originY: originY
       };
+      
+      this._resetCurrentTransform(e);
     },
 
     _handleGroupLogic: function (e, target) {
@@ -739,20 +789,29 @@
       var constraintPosition = target.translateToOriginPoint(target.getCenterPoint(), t.originX, t.originY);
       var localMouse = target.toLocalPoint(new fabric.Point(x - offset.left, y - offset.top), t.originX, t.originY);
       
-      if (t.originX === 'right')
+      if (t.originX === 'right') {
         localMouse.x *= -1;
-      if (t.originY === 'bottom')
+      }
+      else if (t.originX === 'center') {
+        localMouse.x *= t.mouseXSign * 2;
+      }
+        
+      if (t.originY === 'bottom') {
         localMouse.y *= -1;
-          
+      }
+      else if (t.originY === 'center') {
+        localMouse.y *= t.mouseYSign * 2;  
+      }
+      
       // Actually scale the object
       var newScaleX = target.scaleX, newScaleY = target.scaleY;
       if (by === 'equally' && !target.lockScalingX && !target.lockScalingY) {
         var dist = localMouse.y + localMouse.x;
-        var lastDist = target.height * t.scaleY + target.width * t.scaleX;
+        var lastDist = target.height * t.original.scaleY + target.width * t.original.scaleX;
         
         // We use t.scaleX/Y instead of target.scaleX/Y because the object may have a min scale and we'll loose the proportions
-        newScaleX = t.scaleX * dist/lastDist;
-        newScaleY = t.scaleY * dist/lastDist
+        newScaleX = t.original.scaleX * dist/lastDist;
+        newScaleY = t.original.scaleY * dist/lastDist
         target.set('scaleX', newScaleX);
         target.set('scaleY', newScaleY);
       }
