@@ -52,7 +52,7 @@
      * @property
      * @type Array
      */
-    stateProperties:  ('top left width height scaleX scaleY flipX flipY ' +
+    stateProperties:  ('originY originX top left width height scaleX scaleY flipX flipY ' +
                       'theta angle opacity cornersize fill overlayFill stroke ' +
                       'strokeWidth fillRule borderScaleFactor transformMatrix ' +
                       'selectable').split(' '),
@@ -147,6 +147,7 @@
       ctx.globalAlpha = this.opacity;
       
       var center = this.getCenterPoint();
+      
       ctx.translate(center.x, center.y);
       ctx.rotate(this.theta);
       ctx.scale(
