@@ -50,6 +50,16 @@
     return degrees * PiBy180;
   }
   
+  /**
+   * Rotates `point` around `origin` with `radians`
+   * @static
+   * @method rotatePoint
+   * @memberOf fabric.util
+   * @param {fabric.Point} The point to rotate
+   * @param {fabric.Point} The origin of the rotation
+   * @param {Number} The radians of the angle for the rotation
+   * @return {fabric.Point} The new rotated point
+   */
   function rotatePoint(point, origin, radians) {
     var sin = Math.sin(radians),
         cos = Math.cos(radians);
