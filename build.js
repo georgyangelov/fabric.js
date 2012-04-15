@@ -82,6 +82,7 @@ var filesToInclude = [
   ifSpecifiedInclude('serialization', 'src/canvas.serialization.js'),
   
   'src/object.class.js',
+  'src/bitmap.class.js',
   'src/line.class.js',
   'src/circle.class.js',
   'src/triangle.class.js',
