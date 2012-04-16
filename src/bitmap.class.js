@@ -25,14 +25,9 @@
     
     /**
      * @property
-     * @type Object
-     */
-    /*options: {
-      rx: 0,
-      ry: 0
-    },*/
-	
-	tCtx: null,
+     * @type {CanvasRenderingContext2D}
+     */	
+	bmp: null,
     
     /**
      * Constructor
@@ -43,25 +38,51 @@
     initialize: function(options) {
       this.callSuper('initialize', options);
 	  this._initTempCanvas();
-      //this._initRxRy();
     },
 	
+	/**
+	 * Initializes the cached canvas representation of the bitmap data
+	 * @private
+	 * @method _initTempCanvas
+	 */
 	_initTempCanvas: function() {
 	  var canvasTemp = document.createElement("canvas");
 	  canvasTemp.width = this.width;
 	  canvasTemp.height = this.height;
-	  this.tCtx = canvasTemp.getContext("2d");
+	  this.bmp = canvasTemp.getContext("2d");
 	},
 	
-	drawPixels: function(pixelData, x, y) {
-	  this.tCtx.putImageData(pixelData, x, y);
+	/**
+	 * Overlay pixels over the bitmap
+	 * @method draw
+	 * @param imageData {ImageData}
+	 * @param x {Number} Left-constrained x coordinate of the draw
+	 * @param y {Number} Top-constrained y coordinate of the draw
+	 */
+	draw: function(imageData, x, y) {
+	  this.bmp.putImageData(imageData, x, y);
 	},
 	
+	/**
+	 * Clears the bitmap
+	 * @method clear
+	 */
+	clear: function() {
+	  this.bmp.clearRect(0, 0, this.width, this.height);
+	},
+	
+	/**
+	 * Renders a fabric.Object on the bitmap (only once, when this function is called)
+	 * and saves it as a bitmap. Shapes aren't preserved
+	 * @method add
+	 * @param object {fabric.Object}
+	 */
 	add: function(object) {
-	  object.render(this.tCtx);
+	  object.render(this.bmp);
 	},
 	
-	invert: function() {
+	// Please ignore for now, this code doesn't belong here
+	/*invert: function() {
 	  var pixels = this.tCtx.getImageData(0, 0, this.width, this.height);
 	  var px = pixels.data;
 	  var len = px.length;
@@ -75,7 +96,7 @@
 	  
 	  this.tCtx.clearRect(0, 0, this.width, this.height);
 	  this.tCtx.putImageData(pixels, 0, 0);
-	},
+	},*/
 	
     /**
      * @private
@@ -84,6 +105,7 @@
      */
     _render: function(ctx) {
 	  ctx.save();
+	  // We need to be in top-left coordinate space
 	  ctx.translate(-this.width / 2, -this.height / 2);
       ctx.drawImage(this.tCtx.canvas, 0, 0);
 	  ctx.restore();
@@ -91,14 +113,33 @@
   });
   
   /**
-   * Returns fabric.Rect instance from an object representation
+   * Returns fabric.Bitmap instance from an object representation
    * @static
-   * @method fabric.Rect.fromObject
+   * @method fabric.Bitmap.fromObject
    * @param object {Object} object to create an instance from
-   * @return {Object} instance of fabric.Rect
+   * @return {fabric.Bitmap}
    */
   fabric.Bitmap.fromObject = function(object) {
     return new fabric.Bitmap(object);
+  };
+  
+  /**
+   * Returns fabric.Bitmap instance from a fabric.Object instance
+   * @static
+   * @method fabric.Bitmap.fromObject
+   * @param object {fabric.Object} object to create an instance from
+   * @return {fabric.Bitmap}
+   */
+  fabric.Bitmap.fromFabricObject = function(object) {
+	var bmp = new fabric.Bitmap({
+	  width: object.width,
+	  height: object.height,
+	  top: object.top,
+	  left: object.left
+	});
+	bmp.add(object);
+	
+	return bmp;
   };
   
 })(typeof exports != 'undefined' ? exports : this);
