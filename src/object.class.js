@@ -272,6 +272,13 @@
       return "#<fabric." + capitalize(this.type) + ">";
     },
     
+    /**
+     * Makes sure the scale is valid and modifies it if necessary
+     * @private
+     * @method _constrainScale
+     * @param {Number} value
+     * @return {Number}
+     */
     _constrainScale: function(value) {
       if (Math.abs(value) < this.minScaleLimit) {
         if (value < 0)
