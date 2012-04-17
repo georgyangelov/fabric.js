@@ -514,6 +514,32 @@
     },
     
     /**
+     * Returns the top-left coordinates and width/height of the bounding box of the object
+     * @method getBoundingBox
+     * @return {Object} {x: ..., y: ..., width: ..., height: ...} The x and y are top-left based, in global coordinates
+     */
+    getBoundingBox: function() {
+      if (this.angle % 360 === 0) {
+        var topleft = this.getPointByOrigin('left', 'top');
+        return {x: topleft.x, y: topleft.y, width: this.getWidth(), height: this.getHeight()};
+      }
+      else {
+        var center = this.getCenterPoint();
+        var halfWidth = this.getWidth() / 2;
+        var halfHeight = this.getHeight() / 2;
+        var tl = fabric.util.rotatePoint(new fabric.Point(center.x - halfWidth, center.y - halfHeight), center, this.theta),
+            bl = fabric.util.rotatePoint(new fabric.Point(center.x - halfWidth, center.y + halfHeight), center, this.theta),
+            tr = fabric.util.rotatePoint(new fabric.Point(center.x + halfWidth, center.y - halfHeight), center, this.theta),
+            br = fabric.util.rotatePoint(new fabric.Point(center.x + halfWidth, center.y + halfHeight), center, this.theta);
+        
+        var x = Math.min(tl.x, bl.x, tr.x, br.x),
+            y = Math.min(tl.y, bl.y, tr.y, br.y);
+            
+        return {x: x, y: y, width: Math.max(tl.x, bl.x, tr.x, br.x) - x, height: Math.max(tl.y, bl.y, tr.y, br.y) - y};
+      }
+    },
+    
+    /**
      * Returns the point in local coordinates
      * @method toLocalPoint
      * @param {fabric.Point} The point relative to the global coordinate system
@@ -656,7 +682,6 @@
      * @chainable
      */
     setCoords: function() {
-
       this.currentWidth = this.width * this.scaleX;
       this.currentHeight = this.height * this.scaleY;
 

@@ -53,6 +53,35 @@
 	},
 	
 	/**
+	 * Resizes the temp canvas with offsets specified by the parameters
+	 * @private
+	 * @method _resizeBmp
+	 * @param left {Number} The offset by which to stretch the left border (positive to widen, negative to shrink)
+	 * @param top {Number} The offset by which to stretch the top border (positive to widen, negative to shrink)
+	 * @param right {Number} The offset by which to stretch the right border (positive to widen, negative to shrink)
+	 * @param bottom {Number} The offset by which to stretch the bottom border (positive to widen, negative to shrink)
+	 */
+	_resizeBmp: function(left, top, right, bottom) {
+	  var copyOld = (this.width != 0 && this.height != 0);
+	  
+	  var oldBitmap;
+	  if (copyOld) {
+		oldBitmap = this.bmp.getImageData(0, 0, this.width, this.height);
+	  }
+	  
+	  this.bmp.canvas.width = left + this.width + right;
+	  this.bmp.canvas.height = top + this.height + bottom;
+	  
+	  this.width = this.bmp.canvas.width;
+	  this.height = this.bmp.canvas.height;
+	  
+	  if (copyOld) {
+		// The canvas should be cleared by the resize so just draw the old contents over it
+		this.bmp.putImageData(oldBitmap, left, top);
+	  }
+	},
+	
+	/**
 	 * Overlay pixels over the bitmap
 	 * @method draw
 	 * @param imageData {ImageData}
@@ -78,7 +107,36 @@
 	 * @param object {fabric.Object}
 	 */
 	add: function(object) {
+	  var boundingBox = object.getBoundingBox();
+	  
+	  // If there's nothing drawn already
+	  
+	  var me;
+	  if (this.width == 0 || this.height == 0) {
+		this._resizeBmp(0, 0, boundingBox.width, boundingBox.height);
+		
+		this.setPositionByOrigin(new fabric.Point(boundingBox.x, boundingBox.y), 'left', 'top');
+		me = this.getPointByOrigin('left', 'top');
+	  }
+	  else {
+		me = this.getPointByOrigin('left', 'top');
+		
+		var left = me.x - boundingBox.x,
+			top = me.y - boundingBox.y,
+			right = boundingBox.x + boundingBox.width - (me.x + this.width),
+			bottom = boundingBox.y + boundingBox.height - (me.y + this.height);
+  
+		if (left > 0 || top > 0 || right > 0 || bottom > 0) {
+		  this._resizeBmp(left > 0 ? left : 0, top > 0 ? top : 0, right > 0 ? right : 0, bottom > 0 ? bottom : 0);
+		}
+	  }
+	  
+	  // Render the object relative to the global coordinates
+	  // TODO (stormbreaker): Account for bitmap rotation
+	  this.bmp.save();
+	  this.bmp.translate(-me.x, -me.y);
 	  object.render(this.bmp);
+	  this.bmp.restore();
 	},
 	
 	// Please ignore for now, this code doesn't belong here
@@ -105,9 +163,9 @@
      */
     _render: function(ctx) {
 	  ctx.save();
-	  // We need to be in top-left coordinate space
+	  // We need to be in center-center coordinate space
 	  ctx.translate(-this.width / 2, -this.height / 2);
-      ctx.drawImage(this.tCtx.canvas, 0, 0);
+      ctx.drawImage(this.bmp.canvas, 0, 0);
 	  ctx.restore();
     },
   });
